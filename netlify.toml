@@ -2,9 +2,9 @@
 
 [build]
 
-  publish = "./index.html" 
+  publish = "./" 
 
 [functions]
   
-  directory = "./netlify/functions/proxy.js" 
+  directory = "./netlify/functions/" 
 
