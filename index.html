@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabNews PR Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <style>
+        :root {
+            --color-bg: #0d1117;
+            --color-text: #c9d1d9;
+            --color-border: #30363d;
+            --color-header-bg: #161b22;
+            --color-component-bg: #161b22;
+            --color-primary: #58a6ff;
+            --color-success: #3fb950;
+            --color-danger: #f85149;
+            --color-add-bg: rgba(46, 160, 67, 0.15);
+            --color-del-bg: rgba(248, 81, 73, 0.15);
+            --color-hover-bg: rgba(177, 186, 196, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            padding: 20px 0;
+            text-align: center;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #f0f6fc;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 0;
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--color-component-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+        }
+
+        .selector-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--color-text);
+            font-size: 1rem;
+        }
+
+        .pr-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: #010409;
+            color: var(--color-text);
+            transition: border-color 0.2s ease;
+        }
+
+        .pr-select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+        
+        .actions-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            align-items: center;
+        }
+
+        .format-buttons {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .format-btn {
+            padding: 10px 18px;
+            border: none;
+            background-color: transparent;
+            color: var(--color-text);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-right: 1px solid var(--color-border);
+        }
+        
+        .format-btn:last-child {
+            border-right: none;
+        }
+
+        .format-btn:hover {
+            background-color: #30363d;
+        }
+
+        .format-btn.active {
+            background-color: var(--color-primary);
+            color: #ffffff;
+            font-weight: bold;
+        }
+        
+        #aiSummaryBtn {
+            padding: 10px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background-color: #21262d;
+            color: var(--color-text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        #aiSummaryBtn:hover:not(:disabled) {
+            background-color: #30363d;
+        }
+        
+        #aiSummaryBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b949e;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #30363d;
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .patch-viewer {
+            background-color: var(--color-component-bg);
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .patch-header {
+            background-color: var(--color-header-bg);
+            color: #f0f6fc;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 14px;
+        }
+
+        .patch-content {
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 12px;
+        }
+        
+        .patch-content::-webkit-scrollbar { width: 12px; }
+        .patch-content::-webkit-scrollbar-track { background: #010409; }
+        .patch-content::-webkit-scrollbar-thumb { background: #30363d; border-radius: 6px; border: 3px solid #010409; }
+        .patch-content::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        .patch-line {
+            padding: 1px 16px;
+            line-height: 20px;
+            white-space: pre;
+            display: flex;
+        }
+        
+        .patch-line:hover { background-color: var(--color-hover-bg); }
+        .patch-line.header { background-color: #1f6feb; color: #ffffff; font-weight: 600; padding: 8px 16px; }
+        .patch-line.added { background-color: var(--color-add-bg); }
+        .patch-line.removed { background-color: var(--color-del-bg); }
+        
+        .line-prefix {
+            width: 16px;
+            text-align: center;
+            user-select: none;
+        }
+        
+        .line-content {
+            padding-left: 12px;
+        }
+
+        .added .line-prefix { color: var(--color-success); }
+        .removed .line-prefix { color: var(--color-danger); }
+
+        .patch-line.file-header { background-color: #21262d; color: #f0f6fc; font-weight: 600; padding: 8px 16px; }
+        .patch-line.file-header::before { content: "📁 "; }
+
+        .error {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #ff7b72;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid rgba(248, 81, 73, 0.4);
+            margin: 20px 0;
+        }
+        
+        .error.rate-limit {
+            background-color: rgba(234, 179, 8, 0.1);
+            color: #fcd34d;
+            border-color: rgba(234, 179, 8, 0.4);
+        }
+
+        .stats-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background-color: var(--color-component-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+        }
+
+        .stat-item { text-align: center; flex: 1; }
+        .stat-number { font-size: 1.5rem; font-weight: bold; }
+        .stat-label { font-size: 0.9rem; color: #8b949e; }
+        .stat-number.added { color: var(--color-success); }
+        .stat-number.removed { color: var(--color-danger); }
+        
+        .ai-summary {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--color-component-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+        }
+        .ai-summary h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #f0f6fc;
+        }
+        /* Markdown Styles */
+        .ai-summary-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: var(--color-text);
+        }
+        .ai-summary-content strong { color: #f0f6fc; font-weight: 600; }
+        .ai-summary-content ul { padding-left: 20px; margin-top: 10px; }
+        .ai-summary-content li { margin-bottom: 5px; }
+        .ai-summary-content code {
+            background-color: rgba(177, 186, 196, 0.12);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.8rem; }
+            .actions-toolbar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>TabNews PR Viewer</h1>
+            <p class="subtitle">Visualize Pull Requests do repositório TabNews com um design familiar</p>
+        </header>
+
+        <main class="content">
+            <div class="controls">
+                <label class="selector-label" for="prSelect">Selecione um Pull Request:</label>
+                <select id="prSelect" class="pr-select">
+                    <option value="">Carregando...</option>
+                </select>
+                
+                <div class="actions-toolbar">
+                    <div class="format-buttons">
+                        <button id="patchBtn" class="format-btn active">📄 Patch</button>
+                        <button id="diffBtn" class="format-btn">🔍 Diff</button>
+                    </div>
+                     <button id="aiSummaryBtn" disabled>✨ Resumir com IA</button>
+                </div>
+            </div>
+
+            <div id="loadingArea" class="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Carregando dados do Pull Request...</p>
+            </div>
+            
+            <div id="aiLoadingArea" class="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>A Inteligência Artificial está analisando as mudanças...</p>
+            </div>
+
+            <div id="errorArea" style="display: none;"></div>
+            
+            <div id="aiSummaryArea" style="display: none;"></div>
+
+            <div id="statsArea" class="stats-area" style="display: none;"></div>
+
+            <div id="patchArea" style="display: none;"></div>
+        </main>
+    </div>
+
+    <script>
+        class TabNewsPRViewer {
+            constructor() {
+                // DOM Elements
+                this.prSelect = document.getElementById('prSelect');
+                this.loadingArea = document.getElementById('loadingArea');
+                this.aiLoadingArea = document.getElementById('aiLoadingArea');
+                this.errorArea = document.getElementById('errorArea');
+                this.statsArea = document.getElementById('statsArea');
+                this.patchArea = document.getElementById('patchArea');
+                this.aiSummaryArea = document.getElementById('aiSummaryArea');
+                this.patchBtn = document.getElementById('patchBtn');
+                this.diffBtn = document.getElementById('diffBtn');
+                this.aiSummaryBtn = document.getElementById('aiSummaryBtn');
+                
+                // State
+                this.currentFormat = 'patch';
+                this.currentPR = null;
+                this.currentPatchContent = '';
+                
+                // Inicializa Markdown Converter
+                this.markdownConverter = new showdown.Converter();
+
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadPullRequests();
+                    this.setupEventListeners();
+                } catch (error) {
+                    this.showError(`Erro ao carregar Pull Requests: ${error.message}. Verifique a sua conexão ou o console para mais detalhes.`);
+                }
+            }
+
+            async loadPullRequests() {
+                const apiUrl = 'https://api.github.com/repos/filipedeschamps/tabnews.com.br/pulls?state=all&per_page=100';
+                
+                try {
+                    const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`);
+                    if (!response.ok) throw new Error(`Falha na rede ou na API do GitHub (HTTP ${response.status})`);
+                    const pulls = await response.json();
+                    this.populatePRSelect(pulls);
+                } catch (error) {
+                     this.prSelect.innerHTML = '<option value="">Não foi possível carregar os PRs</option>';
+                    throw new Error(`Falha ao buscar Pull Requests: ${error.message}`);
+                }
+            }
+
+            populatePRSelect(pulls) {
+                this.prSelect.innerHTML = '<option value="">Selecione um Pull Request...</option>';
+                pulls.forEach(pr => {
+                    const option = document.createElement('option');
+                    option.value = pr.number;
+                    option.textContent = `#${pr.number} - ${pr.title} (${pr.state})`;
+                    this.prSelect.appendChild(option);
+                });
+            }
+
+            setupEventListeners() {
+                this.prSelect.addEventListener('change', (e) => this.handlePRChange(e.target.value));
+                this.patchBtn.addEventListener('click', () => this.handleFormatChange('patch'));
+                this.diffBtn.addEventListener('click', () => this.handleFormatChange('diff'));
+                this.aiSummaryBtn.addEventListener('click', () => this.getAISummary());
+            }
+            
+            async handlePRChange(prNumber) {
+                 if (prNumber) {
+                    this.currentPR = prNumber;
+                    await this.loadPatchDiff(prNumber, this.currentFormat);
+                } else {
+                    this.hideAllSections();
+                    this.currentPR = null;
+                    this.aiSummaryBtn.disabled = true;
+                }
+            }
+            
+            async handleFormatChange(format) {
+                this.setActiveFormat(format);
+                if (this.currentPR) {
+                    await this.loadPatchDiff(this.currentPR, format);
+                }
+            }
+
+            setActiveFormat(format) {
+                this.currentFormat = format;
+                this.patchBtn.classList.toggle('active', format === 'patch');
+                this.diffBtn.classList.toggle('active', format === 'diff');
+            }
+
+            async loadPatchDiff(prNumber, format = 'patch') {
+                this.showLoading();
+                this.hideError();
+                this.hidePatchAndStats();
+                this.hideAiSummary(); // Esconder resumo da IA ao carregar novo patch
+
+                try {
+                    const extension = format === 'patch' ? 'patch' : 'diff';
+                    const patchUrl = `https://patch-diff.githubusercontent.com/raw/filipedeschamps/tabnews.com.br/pull/${prNumber}.${extension}`;
+                    const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(patchUrl)}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}. O conteúdo pode não estar disponível.`);
+                    this.currentPatchContent = await response.text();
+                    this.displayPatch(this.currentPatchContent, prNumber, format);
+                    this.aiSummaryBtn.disabled = false;
+                } catch (error) {
+                    this.showError(`Erro ao carregar '${format}' para o PR #${prNumber}: ${error.message}`);
+                    this.aiSummaryBtn.disabled = true;
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            displayPatch(patchContent, prNumber, format) {
+                const lines = patchContent.split('\n');
+                this.showStats(this.calculateStats(lines));
+                const patchHtml = this.formatPatchContent(lines);
+                const formatName = format.charAt(0).toUpperCase() + format.slice(1);
+                this.patchArea.innerHTML = `
+                    <div class="patch-viewer">
+                        <div class="patch-header">Visualizando ${formatName} do Pull Request #${prNumber}</div>
+                        <div class="patch-content">${patchHtml}</div>
+                    </div>`;
+                this.patchArea.style.display = 'block';
+            }
+            
+            async getAISummary() {
+                if (!this.currentPatchContent) {
+                    this.showError("Nenhum conteúdo de patch para analisar.");
+                    return;
+                }
+                
+                this.showAiLoading();
+                this.hideError();
+                this.aiSummaryArea.style.display = 'none';
+                
+                const apiUrl = 'https://ask-jetrom.vercel.app/generate'; 
+
+
+                const prompt = `Analise o seguinte patch/diff e forneça um resumo em português usando Markdown. O resumo deve ser claro, focado nas mudanças funcionais e fácil de entender. Descreva o propósito geral das alterações, e use listas de marcadores para as principais adições, modificações e remoções.\n\n---\n\n${this.currentPatchContent}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ prompt: prompt }),
+                    });
+
+                    // --- TRATAMENTO MELHORADO PARA ERROS HTTP (INCLUINDO 429) ---
+                    if (!response.ok) { // Verifica se o status HTTP não é 2xx
+                        let errorData;
+                        try {
+                            // Tenta ler o JSON de erro da sua API (onde você envia {"error": "..."})
+                            errorData = await response.json();
+                        } catch (jsonError) {
+                            // Se a resposta não for um JSON válido (ex: erro do servidor web/proxy)
+                            this.showError(`Erro inesperado do servidor (Status: ${response.status}). Não foi possível ler a mensagem de erro.`, 'general');
+                            return; // Interrompe o fluxo
+                        }
+
+                        // Agora, com o JSON de erro lido, você pode exibir a mensagem
+                        // O "errorData.error" contém a mensagem do meu Flask
+                        const errorMessage = errorData.error || `Erro desconhecido da API (Status: ${response.status}).`;
+
+                        if (response.status === 429) {
+                            this.showError(errorMessage, 'rate-limit'); // Usa a classe CSS 'rate-limit'
+                        } else {
+                            this.showError(errorMessage, 'general');
+                        }
+                        return; // Interrompe o fluxo após exibir o erro
+                    }
+                    // --- FIM DO TRATAMENTO MELHORADO ---
+                    
+                    const result = await response.json();
+                    const summaryText = result.generated_text;
