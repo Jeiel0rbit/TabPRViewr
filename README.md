@@ -7,6 +7,21 @@ Dito isso, o projeto está hospedado gratuitamente e sem anúncios. Você pode a
 - PACTH --------> É a "conversa completa" do autor ou quem mais estiver participando.
 - DIFF -----------> Apenas às diferenças do código, do antes e depois, simplificado. 
 
+Usei também API do Github para procurar os PR:
+
+https://api.github.com/repos/filipedeschamps/tabnews.com.br/pulls?state=all&per_page=100
+
+Com isso usando a dica do Github chamado de **PROTIP**, que é alterar o final da url para `.diff` ou `.patch`, dado a isso a url é montada e carregada pela própria api.
+
+```js
+const extension = format === 'patch' ? 'patch' : 'diff';
+const patchUrl = `https://patch-diff.githubusercontent.com/raw/filipedeschamps/tabnews.com.br/pull/${prNumber}.${extension}`;
+```
+
+Por fim conseguimos filtrar o que queremos no front end com estilização formatada ao seu gosto.
+
+---
+
 Você gosta de tecnologia, mas não entende ou até assusta ao ver o que foi feito `commit`. Não se preocupe, integrei minha [API](http://ask-jetrom.vercel.app/) usando Gemini (modelo flash 1.5 pro) com instruções no [back end](https://github.com/Jeiel0rbit/ask-Jetrom), que irão facilitar o entendimento.
 
 - `Note` ---------> Configurei API para permitir até 10 requisições por IP, mais bloqueio de 1 hora.
